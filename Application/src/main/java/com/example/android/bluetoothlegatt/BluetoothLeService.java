@@ -303,13 +303,18 @@ public class BluetoothLeService extends Service {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            byte[] buffer = new byte[2];
-            buffer[0] = 0x01;
-            buffer[1] = 0x06;
-            boolean value = descriptor.getCharacteristic().setValue(buffer);
-            if (value) {
-                mBluetoothGatt.writeDescriptor(descriptor);
-            }
+            //TODO: workaround for Glucometter
+            //byte[] buffer = new byte[2];
+            //buffer[0] = 0x01;
+            //buffer[1] = 0x06;
+            //boolean value = descriptor.getCharacteristic().setValue(buffer);
+            //if (value) {
+            //    BluetoothGattCharacteristic pChar = descriptor.getCharacteristic();
+            //    final int oWrt = pChar.getWriteType();
+            //    pChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+            //    pChar.setWriteType(oWrt);
+            //    mBluetoothGatt.writeDescriptor(descriptor);
+            //}
             mBluetoothGatt.writeDescriptor(descriptor);
         }
     }
