@@ -25,8 +25,8 @@ public class SampleGattAttributes {
     private static HashMap<String, String> attributes = new HashMap();
     public static String BATTERY_SERVICE = "0000180F-0000-1000-8000-00805f9b34fb";
     public static String BATTERY_LEVEL_CHARACTERISTIC = "00002A19-0000-1000-8000-00805f9b34fb";
-    public static String GENERIC_ATTRIBUTE_SERVICE = "00001801-0000-1000-8000-00805f9b34fb";
-    public static String SERVICE_CHANGED_CHARACTERISTIC = "00002A05-0000-1000-8000-00805f9b34fb";
+    public static String GENERIC_ATTRIBUTE_SERVICE = "00001808-0000-1000-8000-00805f9b34fb";
+    public static String SERVICE_CHANGED_CHARACTERISTIC = "00002a18-0000-1000-8000-00805f9b34fb";
     public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
 
     static {

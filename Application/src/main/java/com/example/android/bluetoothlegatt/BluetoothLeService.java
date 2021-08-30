@@ -35,6 +35,8 @@ import android.util.Log;
 import java.util.List;
 import java.util.UUID;
 
+import static java.lang.Thread.sleep;
+
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
  * given Bluetooth LE device.
@@ -91,7 +93,9 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            Log.d(TAG, "On service discovered");
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(TAG, "send broatcast ACTION_GATT_SERVICES_DISCOVERED");
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -105,14 +109,17 @@ public class BluetoothLeService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
+            Log.d(TAG, "Char read");
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            Log.d(TAG, "Char changed");
         }
     };
+    private int properties;
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
@@ -290,32 +297,97 @@ public class BluetoothLeService extends Service {
      * @param characteristic Characteristic to act on.
      * @param enabled If true, enable notification.  False otherwise.
      */
-    public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
+    public void setRemoteCharacteristicNotification(BluetoothGattCharacteristic characteristic,
                                               boolean enabled) {
+
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+        if (UUID.fromString("00002a18-0000-1000-8000-00805f9b34fb").equals(characteristic.getUuid()) ||
+                UUID.fromString("00002a52-0000-1000-8000-00805f9b34fb").equals(characteristic.getUuid()) ||
+                UUID.fromString("00002a34-0000-1000-8000-00805f9b34fb").equals(characteristic.getUuid())) {
 
-        // This is specific to Heart Rate Measurement.
+            mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+
+            byte[] buffer = new byte[2];
+            buffer[0] = 0x01;
+            buffer[1] = 0x01;
+            characteristic.setValue(buffer);
+            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+            mBluetoothGatt.writeCharacteristic(characteristic);
+
+//            buffer[0] = 0x04;
+//            buffer[1] = 0x06;
+//            characteristic.setValue(buffer);
+//            characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+//            mBluetoothGatt.writeCharacteristic(characteristic);
+
+            properties = characteristic.getProperties();
+            if (properties != characteristic.PROPERTY_NOTIFY) {
+                Log.d(TAG, "This characteristic doesn't support notification or doesn't come from discoverServices().");
+                return;
+            }
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+            if (descriptor == null) {
+                Log.d(TAG, "This characteristic misses the client characteristic configuration descriptor.");
+                return;
+            }
+            if (enabled) {
+                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            } else {
+                descriptor.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+            }
+            boolean result = mBluetoothGatt.writeDescriptor(descriptor);
+            Log.d(TAG, "Descriptor wrote:" + result);
+        }
+    }
+
+    public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
+                                                    boolean enabled){
+
+    }
+
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+        mBluetoothGatt.writeCharacteristic(characteristic);
+    }
+    /**
+     * Enables or disables notification on a give characteristic.
+     *
+     * @param characteristic Characteristic to act on.
+     * @param enabled If true, enable notification.  False otherwise.
+     */
+    public void setCharacteristicIndication(BluetoothGattCharacteristic characteristic,
+                                              boolean enabled) {
         if (UUID_SVC_CHAR_MEASUREMENT.equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                    UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            //TODO: workaround for Glucometter
+
+            if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+                Log.w(TAG, "BluetoothAdapter not initialized");
+                return;
+            }
+
+            //mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+            properties = characteristic.getProperties();
+            if (properties != characteristic.PROPERTY_NOTIFY) {
+                Log.d(TAG, "This characteristic doesn't support notification or doesn't come from discoverServices().");
+                return;
+            }
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(SampleGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+            if (descriptor == null) {
+                Log.d(TAG, "This characteristic misses the client characteristic configuration descriptor.");
+                return;
+            }
             //byte[] buffer = new byte[2];
             //buffer[0] = 0x01;
             //buffer[1] = 0x06;
-            //boolean value = descriptor.getCharacteristic().setValue(buffer);
-            //if (value) {
-            //    BluetoothGattCharacteristic pChar = descriptor.getCharacteristic();
-            //    final int oWrt = pChar.getWriteType();
-            //    pChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-            //    pChar.setWriteType(oWrt);
-            //    mBluetoothGatt.writeDescriptor(descriptor);
-            //}
-            mBluetoothGatt.writeDescriptor(descriptor);
+            //descriptor.getCharacteristic().setValue(buffer);
+            if (enabled) {
+                descriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+            } else {
+                descriptor.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+            }
+            boolean result = mBluetoothGatt.writeDescriptor(descriptor);
+            Log.d(TAG, "Descriptor wrote:" + result);
         }
     }
 
